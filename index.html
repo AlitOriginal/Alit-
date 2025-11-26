@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Highlight.js для подсветки кода -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+    <!-- Auth Modal -->
+    <div id="authModal" class="modal active">
+        <div class="modal-content auth-content">
+            <div class="auth-tabs">
+                <button class="auth-tab-btn active" data-tab="login">Вход</button>
+                <button class="auth-tab-btn" data-tab="register">Регистрация</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="auth-form active">
+                <h2>Вход в аккаунт</h2>
+                <div class="form-group">
+                    <input type="text" id="loginUsername" placeholder="Имя пользователя" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="loginPassword" placeholder="Пароль" required>
+                </div>
+                <button type="submit" class="auth-btn">Войти</button>
+                <div id="loginError" class="error-message"></div>
+            </form>
+
+            <!-- Register Form -->
+            <form id="registerForm" class="auth-form">
+                <h2>Создать аккаунт</h2>
+                <div class="form-group">
+                    <input type="text" id="registerUsername" placeholder="Имя пользователя" required>
+                </div>
+                <div class="form-group">
+                    <input type="email" id="registerEmail" placeholder="Email" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="registerPassword" placeholder="Пароль" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="registerPasswordConfirm" placeholder="Подтвердите пароль" required>
+                </div>
+                <button type="submit" class="auth-btn">Зарегистрироваться</button>
+                <div id="registerError" class="error-message"></div>
+            </form>
+        </div>
+    </div>
+
+    <div class="container" id="mainContainer" style="display: none;">
+        <!-- Mobile Header with Hamburger -->
+        <div class="mobile-header">
+            <button class="mobile-menu-toggle" id="mobileMenuToggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <div class="mobile-header-title" id="mobileHeaderTitle">AI Chat</div>
+            <button class="mobile-profile-btn" id="mobileProfileBtn">
+                <div class="mobile-avatar" id="mobileAvatar">U</div>
+            </button>
+        </div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button class="new-chat-btn" id="newChatBtn">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M10.5 3.5H3.5V16.5H16.5V9.5M10.5 3.5V10.5M10.5 3.5H17.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span>Новый чат</span>
+                </button>
+            </div>
+
+            <div class="sidebar-tabs">
+                <button class="sidebar-tab active" data-tab="ai-chat">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M2 11a4 4 0 1 0 8 0V7a4 4 0 0 0-8 0v4zm10-6v4a6 6 0 1 1 12 0V5a2 2 0 0 0-2-2h-8a2 2 0 0 0-2 2z"/>
+                    </svg>
+                    AI
+                </button>
+                <!-- Global Chat disabled for now -->
+                <!-- <button class="sidebar-tab" data-tab="global-chat">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5z"/>
+                    </svg>
+                    Чат
+                </button> -->
+            </div>
+
+            <div class="sidebar-content">
+                <!-- AI Chat History -->
+                <div class="chat-history" id="aiChatHistory">
+                    <div class="history-item active" data-chat-id="1">
+                        <span class="history-text">Первый разговор</span>
+                        <button class="delete-btn">×</button>
+                    </div>
+                </div>
+
+                <!-- Global Chat Users -->
+                <div class="global-users" id="globalUsers" style="display: none;">
+                    <div class="users-header">Пользователи</div>
+                    <div class="users-list" id="usersList"></div>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <button class="profile-btn" id="profileBtn">
+                    <div class="profile-avatar" id="profileAvatar">U</div>
+                    <div class="profile-info">
+                        <div class="profile-name" id="profileName">Пользователь</div>
+                        <small id="profileEmail">user@example.com</small>
+                    </div>
+                </button>
+                <button class="logout-btn" id="logoutBtn" title="Выход">
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M3 4a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V5a1 1 0 00-1-1H3zm12-1a2 2 0 012 2v12a2 2 0 01-2 2H3a2 2 0 01-2-2V5a2 2 0 012-2h12zm-3 8a1 1 0 11-2 0 1 1 0 012 0z"/>
+                    </svg>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="chat-container">
+            <!-- AI Chat View -->
+            <div class="chat-view active" id="aiChatView">
+                <div class="chat-messages" id="chatMessages">
+                <div class="welcome-screen">
+                    <div class="welcome-content">
+                        <h1>AI Chat Assistant</h1>
+                        <p>Начните разговор с нашим умным помощником</p>
+                        <div class="quick-actions">
+                            <button class="quick-action-btn" data-prompt="Объясни как работает машинное обучение">
+                                <div class="action-icon">🤖</div>
+                                <div class="action-text">Объясни машинное обучение</div>
+                            </button>
+                            <button class="quick-action-btn" data-prompt="Напиши простой пример на Python">
+                                <div class="action-icon">💻</div>
+                                <div class="action-text">Пример на Python</div>
+                            </button>
+                            <button class="quick-action-btn" data-prompt="Какие лучшие практики веб-разработки?">
+                                <div class="action-icon">🌐</div>
+                                <div class="action-text">Веб-разработка</div>
+                            </button>
+                            <button class="quick-action-btn" data-prompt="Расскажи о разных языках программирования">
+                                <div class="action-icon">📚</div>
+                                <div class="action-text">Языки программирования</div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="chat-input-area">
+                <div class="input-wrapper">
+                    <textarea 
+                        id="messageInput" 
+                        class="message-input" 
+                        placeholder="Напишите ваше сообщение..." 
+                        rows="1"
+                    ></textarea>
+                    <button class="send-btn" id="sendBtn">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M2 10L18 2L10 18L9 11L2 10Z" fill="currentColor"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="input-footer">
+                    <small>AI Assistant может совершать ошибки. Проверяйте важную информацию.</small>
+                </div>
+            </div>
+            </div>
+
+            <!-- Global Chat View - DISABLED -->
+            <div class="chat-view" id="globalChatView" style="display: none;">
+                <div class="chat-messages" id="globalChatMessages">
+                    <div class="chat-loading">
+                        <p>Загрузка сообщений...</p>
+                    </div>
+                </div>
+
+                <!-- Global Chat Input -->
+                <div class="chat-input-area">
+                    <div class="input-wrapper">
+                        <textarea 
+                            id="globalMessageInput" 
+                            class="message-input" 
+                            placeholder="Напишите сообщение в общий чат..." 
+                            rows="1"
+                        ></textarea>
+                        <button class="send-btn" id="globalSendBtn">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                <path d="M2 10L18 2L10 18L9 11L2 10Z" fill="currentColor"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav" id="mobileBottomNav">
+        <button class="mobile-nav-item active" data-tab="ai-chat">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm-5-9h10v2H7z"/>
+            </svg>
+            <span>AI</span>
+        </button>
+        <!-- Global Chat disabled for now -->
+        <!-- <button class="mobile-nav-item" data-tab="global-chat">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+            </svg>
+            <span>Чат</span>
+        </button> -->
+        <button class="mobile-nav-item" id="mobileNewChatBtn">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17 12h-5v5h-2v-5H5v-2h5V5h2v5h5v2z"/>
+            </svg>
+            <span>Новый</span>
+        </button>
+    </nav>
+
+    <div id="mobileMenuOverlay" class="mobile-menu-overlay"></div>
+
+    <!-- Profile Modal -->
+    <div id="profileModal" class="modal">
+        <div class="modal-content profile-content">
+            <button class="modal-close" id="profileClose">&times;</button>
+            <h2>Профиль пользователя</h2>
+            <div class="profile-details">
+                <div class="profile-avatar-large" id="profileAvatarLarge">U</div>
+                <div class="profile-info-full">
+                    <div class="info-item">
+                        <label>Имя пользователя:</label>
+                        <p id="profileUsernameDisplay"></p>
+                    </div>
+                    <div class="info-item">
+                        <label>Email:</label>
+                        <p id="profileEmailDisplay"></p>
+                    </div>
+                </div>
+            </div>
+            <button class="auth-btn logout-btn-modal" id="logoutBtnModal">Выход</button>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auth Test</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        .test { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .pass { background: #90EE90; }
+        .fail { background: #FFB6C1; }
+        button { padding: 10px; margin: 5px; cursor: pointer; }
+        pre { background: #f0f0f0; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Authentication Test Suite</h1>
+    
+    <div id="tests"></div>
+    
+    <h2>Manual Tests</h2>
+    <button onclick="testRegister()">Test Register</button>
+    <button onclick="testLogin()">Test Login</button>
+    <button onclick="testRestore()">Test Session Restore</button>
+    <button onclick="checkStorage()">Check localStorage</button>
+    <button onclick="clearStorage()">Clear localStorage</button>
+    <button onclick="testSendMessage()">Test Send Message</button>
+    
+    <pre id="output"></pre>
+
+    <script>
+        const API_URL = `${window.location.protocol}//${window.location.hostname}:5000/api/auth`;
+        const SERVER_URL = `${window.location.protocol}//${window.location.hostname}:5000`;
+        
+        function log(msg) {
+            const output = document.getElementById('output');
+            output.textContent += msg + '\n';
+            console.log(msg);
+        }
+        
+        function clearLog() {
+            document.getElementById('output').textContent = '';
+        }
+
+        async function testRegister() {
+            clearLog();
+            log('=== Testing Register ===');
+            const testUser = `user_${Date.now()}`;
+            
+            try {
+                const response = await fetch(`${API_URL}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        username: testUser,
+                        email: `${testUser}@test.com`,
+                        password: 'password123'
+                    })
+                });
+                
+                const data = await response.json();
+                log('Response status: ' + response.status);
+                log('Response: ' + JSON.stringify(data, null, 2));
+                
+                if (data.user) {
+                    log('User object: ' + JSON.stringify(data.user, null, 2));
+                    log('Token: ' + (data.user.token || 'MISSING'));
+                    
+                    // Store for login test
+                    localStorage.setItem('test_user', testUser);
+                    localStorage.setItem('test_password', 'password123');
+                }
+            } catch (error) {
+                log('Error: ' + error.message);
+            }
+        }
+
+        async function testLogin() {
+            clearLog();
+            log('=== Testing Login ===');
+            const testUser = localStorage.getItem('test_user') || `user_${Date.now()}`;
+            const password = localStorage.getItem('test_password') || 'password123';
+            
+            try {
+                const response = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        username: testUser,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                log('Response status: ' + response.status);
+                log('Response: ' + JSON.stringify(data, null, 2));
+                
+                if (data.token) {
+                    const userObj = { ...data.user, token: data.token };
+                    log('Setting localStorage user: ' + JSON.stringify(userObj, null, 2));
+                    localStorage.setItem('user', JSON.stringify(userObj));
+                    log('localStorage.user is now: ' + localStorage.getItem('user'));
+                }
+            } catch (error) {
+                log('Error: ' + error.message);
+            }
+        }
+
+        async function testRestore() {
+            clearLog();
+            log('=== Testing Session Restore ===');
+            
+            try {
+                const response = await fetch(`${API_URL}/user`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                
+                log('Response status: ' + response.status);
+                if (response.ok) {
+                    const user = await response.json();
+                    log('Restored user: ' + JSON.stringify(user, null, 2));
+                    localStorage.setItem('user', JSON.stringify(user));
+                    log('localStorage.user updated: ' + localStorage.getItem('user'));
+                } else {
+                    log('Failed to restore: ' + response.statusText);
+                }
+            } catch (error) {
+                log('Error: ' + error.message);
+            }
+        }
+
+        function checkStorage() {
+            clearLog();
+            log('=== localStorage Contents ===');
+            const user = localStorage.getItem('user');
+            if (user) {
+                try {
+                    const parsed = JSON.parse(user);
+                    log('User: ' + JSON.stringify(parsed, null, 2));
+                    log('Has token: ' + !!(parsed && parsed.token));
+                } catch (e) {
+                    log('ERROR parsing user: ' + e.message);
+                    log('Raw value: ' + user);
+                }
+            } else {
+                log('No user in localStorage');
+            }
+        }
+
+        function clearStorage() {
+            localStorage.clear();
+            log('localStorage cleared');
+        }
+
+        async function testSendMessage() {
+            clearLog();
+            log('=== Testing Send Message ===');
+            
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            if (!user || !user.token) {
+                log('ERROR: No token in localStorage');
+                log('User: ' + JSON.stringify(user, null, 2));
+                return;
+            }
+            
+            log('Using token: ' + user.token);
+            
+            try {
+                const response = await fetch(`${SERVER_URL}/api/chat/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${user.token}`
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ content: 'Test message' })
+                });
+                
+                const data = await response.json();
+                log('Response status: ' + response.status);
+                log('Response: ' + JSON.stringify(data, null, 2));
+            } catch (error) {
+                log('Error: ' + error.message);
+            }
+        }
+
+        // Auto-check storage on load
+        window.addEventListener('load', () => {
+            checkStorage();
+        });
+    </script>
+</body>
+</html>
